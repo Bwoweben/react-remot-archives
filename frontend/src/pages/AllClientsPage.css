@@ -1,0 +1,48 @@
+.all-clients-page {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    width: 100%; /* This ensures the page content uses the full available width */
+  }
+  
+  .summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  .summary-value {
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 0;
+  }
+  
+  .clients-table-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    background-color: #2f2f2f;
+    border-radius: 8px;
+    padding: 1.5rem;
+    border: 1px solid #444;
+  }
+  
+  .table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .table-header h2 {
+    margin: 0;
+  }
+  
+  .status-online {
+    color: #4ade80; /* A nice green */
+    font-weight: bold;
+  }
+  
+  .status-offline {
+    color: #f87171; /* A nice red */
+    font-weight: bold;
+  }

@@ -2,32 +2,33 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Import the main API router and settings
-# Correct import
+# Import API router (contains all endpoint routes) and app settings
 from app.api.api_v1.api import api_router
 from app.core.config import settings
 
-# Create the FastAPI application instance
+# Create the FastAPI app instance with title and OpenAPI documentation URL
 app = FastAPI(
     title="IoT Meter API",
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
-# --- Set up CORS (Cross-Origin Resource Sharing) Middleware ---
+# --- Configure CORS Middleware ---
+# Allows requests from specified frontend origins (e.g., React dashboard) to access the API
 if settings.BACKEND_CORS_ORIGINS:
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],  # Allowed origins list
+        allow_credentials=True,   # Allows cookies/credentials
+        allow_methods=["*"],       # Allow all HTTP methods (GET, POST, etc.)
+        allow_headers=["*"],       # Allow all headers
     )
 
-# --- Include the API Router ---
-# This line incorporates all the endpoints defined in the /api/api_v1/endpoints/ directory.
+# --- Register API Routes ---
+# Mounts all versioned API endpoints under the prefix (e.g., "/api/v1")
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
-# You can also add a simple root endpoint for health checks
+# --- Health Check / Root Endpoint ---
+# Simple GET endpoint to verify the API is running
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the IoT Meter API"}

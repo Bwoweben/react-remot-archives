@@ -3,17 +3,19 @@ import os
 from pydantic_settings import BaseSettings
 from typing import List
 
+# Settings class loads environment variables and centralizes app configuration
 class Settings(BaseSettings):
     # --- Google Cloud SQL Credentials ---
-    PASSWORD: str
-    PUBLIC_IP_ADDRESS: str
-    DBNAME: str
-    PROJECT_ID: str
-    INSTANCE_NAME: str
-    USERNAME: str
+    PASSWORD: str                # Database password
+    PUBLIC_IP_ADDRESS: str       # Public IP for Cloud SQL instance
+    DBNAME: str                  # Database name
+    PROJECT_ID: str              # GCP project ID
+    INSTANCE_NAME: str           # Cloud SQL instance name
+    USERNAME: str                # Database username
     
     # --- SQLAlchemy Database URI (Computed Property) ---
-    # This is for connecting from your local machine
+    # Builds the DB connection string for SQLAlchemy using MySQL Connector
+    # This URI is used to connect to the database from your app
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
         return (
@@ -21,16 +23,21 @@ class Settings(BaseSettings):
             f"@{self.PUBLIC_IP_ADDRESS}/{self.DBNAME}"
         )
 
-    # --- Other App Settings ---
-    SECRET_KEY: str = "yoursecretkey"
+    # --- Security & App Metadata ---
+    SECRET_KEY: str = "yoursecretkey"   # Secret key for signing tokens (JWT, sessions)
 
-    # --- ADD THESE TWO SETTINGS ---
-    API_V1_STR: str = "/api/v1"
-    BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    # --- API & CORS Settings ---
+    API_V1_STR: str = "/api/v1"         # Prefix for versioned API routes
+    BACKEND_CORS_ORIGINS: List[str] = [ # Allowed origins for frontend apps (React dev servers, etc.)
+        "http://localhost:5173",
+        "http://127.0.0.1:5173"
+    ]
 
+    # --- Pydantic Settings Config ---
+    # Reads environment variables from .env file
     class Config:
         env_file = ".env"
         env_file_encoding = 'utf-8'
 
-# Create a single, importable instance of the settings
+# Create a single, globally importable settings object
 settings = Settings()

@@ -1,0 +1,13 @@
+.footer {
+    text-align: center;
+    padding: 1rem 2rem;
+    background-color: #1a1a1a;
+    border-top: 1px solid #333;
+    color: #a0a0a0;
+    font-size: 0.9em;
+    z-index: 1; /* Ensures footer is above the background */
+  }
+  
+  .footer p {
+    margin: 0;
+  }

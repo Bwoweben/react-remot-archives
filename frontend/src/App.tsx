@@ -1,34 +1,30 @@
-// src/App.tsx
 import { useState } from 'react';
-import Navbar from './components/layout/Navbar';
+import MainLayout from './components/layout/MainLayout';
 import DashboardPage from './pages/DashboardPage';
 import SettingsPage from './pages/SettingsPage';
 import LoginPage from './pages/LoginPage';
-import AllClientsPage from './pages/AllClientsPage'; // 1. Import the new page
+import AllClientsPage from './pages/AllClientsPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  // 2. Add 'allClients' to the possible page states
   const [currentPage, setCurrentPage] = useState<'dashboard' | 'settings' | 'allClients'>('dashboard');
 
   const handleLoginSuccess = () => {
     setIsAuthenticated(true);
   };
 
+  // The LoginPage does not use the MainLayout
   if (!isAuthenticated) {
     return <LoginPage onLoginSuccess={handleLoginSuccess} />;
   }
 
+  // All other pages are wrapped by the MainLayout
   return (
-    <div className="app">
-      <Navbar onNavigate={setCurrentPage} />
-      <main className="content">
-        {/* 3. Add a new condition to render the AllClientsPage */}
-        {currentPage === 'dashboard' && <DashboardPage />}
-        {currentPage === 'settings' && <SettingsPage />}
-        {currentPage === 'allClients' && <AllClientsPage />}
-      </main>
-    </div>
+    <MainLayout onNavigate={setCurrentPage}>
+      {currentPage === 'dashboard' && <DashboardPage />}
+      {currentPage === 'settings' && <SettingsPage />}
+      {currentPage === 'allClients' && <AllClientsPage />}
+    </MainLayout>
   );
 }
 
