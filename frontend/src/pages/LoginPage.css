@@ -1,0 +1,26 @@
+.login-page-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #242424;
+  }
+  
+  .login-page-container .card {
+    width: 100%;
+    max-width: 400px;
+  }
+  
+  .login-page-container form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .error-message {
+    color: #ff6b6b;
+    text-align: center;
+    margin: -0.5rem 0;
+  }
+  
+  
