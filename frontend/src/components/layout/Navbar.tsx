@@ -1,17 +1,20 @@
 import React from 'react';
 import Button from '../common/Button';
 import Logo from '../common/Logo';
+import { type Page } from '../../types/navigation'; // Import the shared type
 import './Navbar.css';
 
 interface NavbarProps {
-  onNavigate: (page: 'dashboard' | 'settings' | 'allClients') => void;
-  currentPage: 'dashboard' | 'settings' | 'allClients';
+  onNavigate: (page: Page) => void;
+  currentPage: Page;
 }
 
 const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
   const navLinks = [
     { key: 'dashboard', name: 'Dashboard' },
     { key: 'allClients', name: 'All Clients' },
+    { key: 'co2', name: 'CO2 Stats' },
+    { key: 'deviceAnalytics', name: 'Device Analytics' },
   ];
 
   return (
@@ -26,7 +29,7 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
             <a
               key={link.key}
               className={`nav-link ${currentPage === link.key ? 'active' : ''}`}
-              onClick={() => onNavigate(link.key as 'dashboard' | 'allClients')}
+              onClick={() => onNavigate(link.key as Page)}
             >
               {link.name}
             </a>
@@ -39,4 +42,3 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
 };
 
 export default Navbar;
-

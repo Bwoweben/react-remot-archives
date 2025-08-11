@@ -1,0 +1,106 @@
+.device-analytics-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 100%;
+  }
+  
+  /* --- Mode Toggle --- */
+  .mode-toggle {
+    display: flex;
+    background-color: #2f2f2f;
+    border-radius: 8px;
+    padding: 0.25rem;
+    border: 1px solid var(--surface-border);
+    width: fit-content;
+  }
+  
+  .mode-toggle button {
+    padding: 0.5rem 1rem;
+    border: none;
+    background-color: transparent;
+    color: var(--text-secondary);
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .mode-toggle button.active {
+    background-color: var(--accent-color);
+    color: white;
+  }
+  
+  /* --- Search Forms --- */
+  .search-form-container {
+    display: grid;
+    grid-template-columns: 2fr 1fr auto;
+    gap: 1rem;
+    align-items: flex-end;
+    padding: 1.5rem;
+    background-color: #2f2f2f;
+    border-radius: 8px;
+    border: 1px solid #444;
+  }
+  
+  .search-form-container.multi-search {
+    grid-template-columns: 1fr auto;
+  }
+  
+  .textarea-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .textarea-wrapper label {
+    font-size: 0.9em;
+    color: #ccc;
+  }
+  
+  .textarea-wrapper textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 0.8em 1em;
+    border-radius: 8px;
+    border: 1px solid #444;
+    background-color: #1a1a1a;
+    color: #fff;
+    font-family: inherit;
+    font-size: 1em;
+    resize: vertical;
+  }
+  
+  /* --- Results --- */
+  .results-container {
+    margin-top: 1rem;
+  }
+  
+  .results-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    animation: fadeIn 0.5s ease-in-out;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .info-text, .error-text {
+    text-align: center;
+    padding: 3rem;
+    background-color: #2f2f2f;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    border: 1px solid #444;
+  }
+  
+  .error-text {
+    color: var(--red-color);
+    border-color: var(--red-color);
+    background-color: rgba(248, 113, 113, 0.1);
+  }
+  

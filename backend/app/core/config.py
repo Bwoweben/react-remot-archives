@@ -33,6 +33,8 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5173"
     ]
 
+    MONGO_CONNECTION_STRING: str
+
     # --- Pydantic Settings Config ---
     # Reads environment variables from .env file
     class Config:

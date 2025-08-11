@@ -2,12 +2,13 @@ import React from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import AnimatedBackground from './AnimatedBackground';
+import { type Page } from '../../types/navigation'; // Import the shared type
 import './MainLayout.css';
 
 interface MainLayoutProps {
   children: React.ReactNode;
-  onNavigate: (page: 'dashboard' | 'settings' | 'allClients') => void;
-  currentPage: 'dashboard' | 'settings' | 'allClients';
+  onNavigate: (page: Page) => void;
+  currentPage: Page;
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children, onNavigate, currentPage }) => {

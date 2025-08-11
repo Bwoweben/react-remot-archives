@@ -1,24 +1,27 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-
-# Import the shared Base from base.py
 from .base import Base
 
 class Record(Base):
-    """
-    SQLAlchemy model for the 'records' or 'meter_readings' table.
-    """
-    __tablename__ = "records" # Or whatever your readings table is called
+    __tablename__ = "records"
 
     id = Column(Integer, primary_key=True, index=True)
-    timestamp = Column(DateTime, nullable=False, index=True)
-    value = Column(Float, nullable=False)
+    time_stamp = Column(DateTime, nullable=False, index=True)
     
-    # This column holds the ID of the device that created this record.
-    # It creates a foreign key constraint to the 'devices' table.
-    device_id = Column(Integer, ForeignKey("devices.id"))
-
-    # This creates the relationship back to the Device model.
-    # It tells SQLAlchemy that the 'device' attribute on a Record instance
-    # should be populated with the related Device object.
+    # Foreign key to the 'devices' table
+    device_id = Column('device', Integer, ForeignKey("devices.id"))
+    
+    # Relationships
     device = relationship("Device", back_populates="records")
+    meta = relationship("RecordMeta", back_populates="record", uselist=False)
+
+class RecordMeta(Base):
+    __tablename__ = "records_meta"
+
+    id = Column(Integer, primary_key=True, index=True)
+    extras = Column(Text)
+    
+    # Foreign key to the 'records' table
+    record_id = Column(Integer, ForeignKey("records.id"))
+    
+    record = relationship("Record", back_populates="meta")
