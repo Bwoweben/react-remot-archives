@@ -1,19 +1,19 @@
 import React from 'react';
 import Button from '../common/Button';
+import Logo from '../common/Logo';
 import './Navbar.css';
 
 interface NavbarProps {
   onNavigate: (page: 'dashboard' | 'settings' | 'allClients') => void;
+  currentPage: 'dashboard' | 'settings' | 'allClients';
 }
 
-// A simple SVG logo component
-const Logo: React.FC = () => (
-  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M3 12H6L9 4L15 20L18 12H21" stroke="#646cff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
+const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
+  const navLinks = [
+    { key: 'dashboard', name: 'Dashboard' },
+    { key: 'allClients', name: 'All Clients' },
+  ];
 
-const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
   return (
     <nav className="navbar">
       <div className="navbar-brand">
@@ -21,8 +21,17 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
         <h1>IoT Dashboard</h1>
       </div>
       <div className="navbar-links">
-        <Button onClick={() => onNavigate('dashboard')}>Dashboard</Button>
-        <Button onClick={() => onNavigate('allClients')}>All Clients</Button>
+        <div className="nav-text-links">
+          {navLinks.map((link) => (
+            <a
+              key={link.key}
+              className={`nav-link ${currentPage === link.key ? 'active' : ''}`}
+              onClick={() => onNavigate(link.key as 'dashboard' | 'allClients')}
+            >
+              {link.name}
+            </a>
+          ))}
+        </div>
         <Button onClick={() => onNavigate('settings')}>Settings</Button>
       </div>
     </nav>
@@ -30,3 +39,4 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
 };
 
 export default Navbar;
+

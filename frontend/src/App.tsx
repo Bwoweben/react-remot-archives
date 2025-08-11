@@ -13,14 +13,12 @@ function App() {
     setIsAuthenticated(true);
   };
 
-  // The LoginPage does not use the MainLayout
   if (!isAuthenticated) {
     return <LoginPage onLoginSuccess={handleLoginSuccess} />;
   }
 
-  // All other pages are wrapped by the MainLayout
   return (
-    <MainLayout onNavigate={setCurrentPage}>
+    <MainLayout onNavigate={setCurrentPage} currentPage={currentPage}>
       {currentPage === 'dashboard' && <DashboardPage />}
       {currentPage === 'settings' && <SettingsPage />}
       {currentPage === 'allClients' && <AllClientsPage />}

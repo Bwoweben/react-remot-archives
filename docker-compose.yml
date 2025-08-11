@@ -1,0 +1,28 @@
+# iot_meter_project/docker-compose.yml
+version: '3.8'
+
+services:
+  # Backend FastAPI Service
+  backend:
+    build: ./backend
+    env_file:
+      - ./backend/.env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app # This mounts your local code for live reloading
+
+  # Frontend React Service
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # This tells the React build to use the containerized backend service URL
+        REACT_APP_API_BASE_URL: http://backend:8000
+    ports:
+      - "5173:80" # Map host port 5173 to container port 80
+    depends_on:
+      - backend
+
+volumes:
+  db_data: # Define a volume for potential database persistence

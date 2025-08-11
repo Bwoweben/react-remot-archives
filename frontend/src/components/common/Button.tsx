@@ -1,14 +1,15 @@
 import React from 'react';
-// Make sure you have a Button.css file for styles
-// import './Button.css';
+import './Button.css';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
+  fullWidth?: boolean;
 }
 
-const Button: React.FC<ButtonProps> = ({ children, ...props }) => {
+const Button: React.FC<ButtonProps> = ({ children, fullWidth, ...props }) => {
+  const className = `custom-button ${fullWidth ? 'full-width' : ''}`;
   return (
-    <button className="custom-button" {...props}>
+    <button className={className} {...props}>
       {children}
     </button>
   );

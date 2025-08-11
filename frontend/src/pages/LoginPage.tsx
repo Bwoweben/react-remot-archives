@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import Input from '../../src/components/common/Input';
-import Button from '../../src/components/common/Button';
-import Card from '../../src/components/common/Card';
-import { login } from '../../src/services/authApi';
+import Input from '../components/common/Input';
+import Button from '../components/common/Button';
+import Card from '../components/common/Card';
+import { login } from '../services/authApi';
+import AnimatedBackground from '../components/layout/AnimatedBackground';
+import Logo from '../components/common/Logo'; // Import the new Logo component
 import './LoginPage.css';
 
 interface LoginPageProps {
@@ -36,32 +38,43 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
   return (
     <div className="login-page-container">
-      <Card title="Welcome Back">
-        <form onSubmit={handleSubmit}>
-          <Input
-            label="Email"
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <Input
-            label="Password"
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          {error && <p className="error-message">{error}</p>}
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? 'Logging in...' : 'Login'}
-          </Button>
-        </form>
-      </Card>
+      <AnimatedBackground />
+      
+      {/* New header for the login page */}
+      <header className="login-header">
+        <Logo />
+        <h1>IoT Dashboard</h1>
+      </header>
+
+      <div className="login-form-wrapper">
+        <Card title="Welcome Back">
+          <form onSubmit={handleSubmit}>
+            <Input
+              label="Email"
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <Input
+              label="Password"
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            {error && <p className="error-message">{error}</p>}
+            <Button type="submit" disabled={isLoading} fullWidth>
+              {isLoading ? 'Logging in...' : 'Login'}
+            </Button>
+          </form>
+        </Card>
+      </div>
     </div>
   );
 };
 
 export default LoginPage;
+

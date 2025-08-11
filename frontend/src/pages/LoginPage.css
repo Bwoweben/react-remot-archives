@@ -1,26 +1,45 @@
 .login-page-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    background-color: #242424;
-  }
-  
-  .login-page-container .card {
-    width: 100%;
-    max-width: 400px;
-  }
-  
-  .login-page-container form {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-  }
-  
-  .error-message {
-    color: #ff6b6b;
-    text-align: center;
-    margin: -0.5rem 0;
-  }
-  
-  
+  display: flex;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-header {
+  position: absolute;
+  top: 2rem;
+  left: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  z-index: 1;
+}
+
+.login-header h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+  color: #fff;
+}
+
+.login-form-wrapper {
+  z-index: 1;
+  width: 100%;
+  max-width: 400px;
+}
+
+.login-page-container form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.error-message {
+  color: #ff6b6b;
+  text-align: center;
+  margin: -0.5rem 0;
+}
+
