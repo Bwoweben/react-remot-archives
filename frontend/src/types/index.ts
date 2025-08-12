@@ -81,3 +81,18 @@ export interface MultiDeviceStatusResponse {
   registered_devices: DeviceStatus[];
   test_devices: DeviceStatus[];
 }
+
+export interface LogCountResult {
+  No: number;
+  serial: string;
+  alias?: string;
+  last_log?: string;
+  first_name?: string;
+  last_name?: string;
+  model_name?: string;
+  log_count: number;
+}
+
+export interface LogCountResponse {
+  data: LogCountResult[];
+}

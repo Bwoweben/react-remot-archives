@@ -1,14 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import case
-from datetime import datetime, time
+from sqlalchemy import case, func
+from datetime import datetime, time, timedelta
 from typing import List
 
 from app.api import deps
-from app.models.device import Device
+from app.models.device import Device, DeviceModel
 from app.models.meter import Record, RecordMeta
 from app.models.user import User
 from app.schemas.device_analytics import DoorOpeningStats, MultiDeviceStatusResponse, DeviceStatusRequest
+from app.schemas.device_analytics import (
+    DoorOpeningStats, 
+    MultiDeviceStatusResponse, 
+    DeviceStatusRequest,
+    LogCountResponse
+)
 
 router = APIRouter()
 
@@ -123,3 +129,32 @@ def get_multi_device_status(request_data: DeviceStatusRequest, db: Session = Dep
         test_devices.append({**device_dict, "No": i + 1, "log_duration": log_duration})
         
     return {"registered_devices": registered_devices, "test_devices": test_devices}
+
+@router.post("/log-count", response_model=LogCountResponse)
+def get_log_count(request_data: DeviceStatusRequest, db: Session = Depends(deps.get_db)):
+    unique_params = list(dict.fromkeys(request_data.identifiers))
+
+    devices = db.query(
+        Device.serial, Device.alias, Device.last_log,
+        User.first_name, User.last_name, DeviceModel.name.label("model_name"),
+        func.count(Record.id).label("log_count")
+    ).select_from(Device)\
+     .join(Record, Record.device_id == Device.id)\
+     .join(User, User.id == Device.user)\
+     .join(DeviceModel, DeviceModel.id == Device.version)\
+     .filter(Device.serial.in_(unique_params))\
+     .filter(
+         Record.time_stamp >= (Device.last_log - timedelta(hours=3)),
+         Record.time_stamp <= Device.last_log
+     )\
+     .group_by(
+         Device.serial, Device.alias, Device.last_log,
+         User.first_name, User.last_name, DeviceModel.name
+     ).all()
+
+    modified_list = [
+        {**row._asdict(), "No": idx + 1}
+        for idx, row in enumerate(devices)
+    ]
+
+    return {"data": modified_list}

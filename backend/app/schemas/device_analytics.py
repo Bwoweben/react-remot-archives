@@ -37,3 +37,16 @@ class DeviceStatus(BaseModel):
 class MultiDeviceStatusResponse(BaseModel):
     registered_devices: List[DeviceStatus]
     test_devices: List[DeviceStatus]
+    
+class LogCountResult(BaseModel):
+    No: int
+    serial: str
+    alias: Optional[str] = None
+    last_log: Optional[datetime] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    model_name: Optional[str] = None
+    log_count: int
+
+class LogCountResponse(BaseModel):
+    data: List[LogCountResult]

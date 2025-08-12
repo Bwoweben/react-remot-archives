@@ -1,34 +1,46 @@
-import React, { useState, useMemo } from 'react';
-import Input from '../components/common/Input';
+import React, { useState, useMemo, useEffect } from 'react';
+// import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import StatCard from '../components/common/StatCard';
 import Table from '../components/common/Table';
-import { fetchDoorOpeningStats, fetchMultiDeviceStatus } from '../services/deviceApi';
-import { type DoorOpeningStats, type MultiDeviceStatusResponse, type DeviceStatus } from '../types';
+import { fetchDoorOpeningStats, fetchMultiDeviceStatus, fetchLogCount } from '../services/deviceApi';
+import { type DoorOpeningStats, type MultiDeviceStatusResponse, 
+    type DeviceStatus, type LogCountResponse, type LogCountResult } from '../types';
 import './DeviceAnalyticsPage.css';
 
-type AnalyticsMode = 'doorOpenings' | 'statusLookup';
+type AnalyticsMode = 'singleDevice' | 'multiDevice';
 
 // --- SVG Icons ---
 const DoorIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14"/><path d="M10 12h4"/></svg>;
 const ClockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>;
+const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
+
 
 const DeviceAnalyticsPage: React.FC = () => {
-  const [mode, setMode] = useState<AnalyticsMode>('doorOpenings');
-  
-  // --- State for both modes ---
+  const [mode, setMode] = useState<AnalyticsMode>('singleDevice');
+  const [identifiers, setIdentifiers] = useState<string[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // --- State for results ---
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
-
-  // --- State for Door Openings mode ---
-  const [serialNumber, setSerialNumber] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [doorData, setDoorData] = useState<DoorOpeningStats | null>(null);
-
-  // --- State for Status Lookup mode ---
-  const [identifiers, setIdentifiers] = useState('');
   const [statusData, setStatusData] = useState<MultiDeviceStatusResponse | null>(null);
+  const [logCountData, setLogCountData] = useState<LogCountResponse | null>(null);
+
+  // Effect to detect mode based on input
+  useEffect(() => {
+    const ids = inputValue.trim().split(/[\s,]+/).filter(Boolean);
+    setIdentifiers(ids);
+    setMode(ids.length > 1 ? 'multiDevice' : 'singleDevice');
+  }, [inputValue]);
+
+  const handleRemoveIdentifier = (idToRemove: string) => {
+    const newIds = identifiers.filter(id => id !== idToRemove);
+    setInputValue(newIds.join(' '));
+  };
 
   const handleSearch = async () => {
     setIsLoading(true);
@@ -36,25 +48,24 @@ const DeviceAnalyticsPage: React.FC = () => {
     setHasSearched(true);
     setDoorData(null);
     setStatusData(null);
+    setLogCountData(null);
 
     try {
-      if (mode === 'doorOpenings') {
-        if (!serialNumber) {
-          setError('Please enter a serial number.');
-          setIsLoading(false);
-          return;
-        }
-        const result = await fetchDoorOpeningStats(serialNumber, date);
+      if (mode === 'singleDevice' && identifiers.length === 1) {
+        const result = await fetchDoorOpeningStats(identifiers[0], date);
         setDoorData(result);
-      } else { // statusLookup mode
-        if (!identifiers.trim()) {
-          setError('Please enter at least one identifier.');
-          setIsLoading(false);
-          return;
-        }
-        const idArray = identifiers.trim().split(/[\s,]+/); // Split by space, comma, or newline
-        const result = await fetchMultiDeviceStatus(idArray);
-        setStatusData(result);
+      } else if (mode === 'multiDevice' && identifiers.length > 0) {
+        // Fetch both status and log count in parallel for efficiency
+        const [statusResult, logCountResult] = await Promise.all([
+          fetchMultiDeviceStatus(identifiers),
+          fetchLogCount(identifiers)
+        ]);
+        setStatusData(statusResult);
+        setLogCountData(logCountResult);
+      } else {
+        setError("Please enter at least one device identifier.");
+        setIsLoading(false);
+        return;
       }
     } catch (err: any) {
       setError(err.message || 'Failed to fetch data.');
@@ -78,40 +89,58 @@ const DeviceAnalyticsPage: React.FC = () => {
     { Header: 'Offline (Days)', accessor: (row: DeviceStatus) => row.log_duration ?? 'N/A' },
   ], []);
 
-  // --- Render Logic ---
+  const logCountColumns = useMemo(() => [
+    { Header: '#', accessor: (row: LogCountResult) => row.No },
+    { Header: 'Serial', accessor: (row: LogCountResult) => row.serial },
+    { Header: 'Owner', accessor: (row: LogCountResult) => `${row.first_name} ${row.last_name}` },
+    { Header: 'Logs (Last 3h)', accessor: (row: LogCountResult) => row.log_count },
+    { Header: 'Last Log', accessor: (row: LogCountResult) => new Date(row.last_log!).toLocaleString() },
+  ], []);
+
   return (
     <div className="device-analytics-page">
       <h1 className="page-title">Device Analytics</h1>
       
-      <div className="mode-toggle">
-        <button onClick={() => setMode('doorOpenings')} className={mode === 'doorOpenings' ? 'active' : ''}>Single Device Analysis</button>
-        <button onClick={() => setMode('statusLookup')} className={mode === 'statusLookup' ? 'active' : ''}>Multi-Device Status Lookup</button>
+      <div className="analytics-command-bar">
+        <div className="command-input-wrapper">
+          <div className="identifier-tags">
+            {identifiers.map(id => (
+              <span key={id} className="identifier-tag">
+                {id}
+                <button onClick={() => handleRemoveIdentifier(id)}><CloseIcon /></button>
+              </span>
+            ))}
+          </div>
+          <input
+            type="text"
+            placeholder="Enter one (for door analysis) or more device identifiers..."
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            className="command-input"
+          />
+        </div>
+        
+        {mode === 'singleDevice' && (
+          <div className="date-picker-wrapper">
+            <label htmlFor="date">Analysis Date</label>
+            <input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </div>
+        )}
+
+        <Button onClick={handleSearch} disabled={isLoading || identifiers.length === 0}>
+          {isLoading ? 'Analyzing...' : 
+           mode === 'singleDevice' ? 'Analyze Device' : `Analyze ${identifiers.length} Devices`}
+        </Button>
       </div>
 
-      {mode === 'doorOpenings' ? (
-        <div className="search-form-container">
-          <Input id="serialNumber" label="Device Serial Number" placeholder="e.g., 301121005003" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} />
-          <Input id="date" label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          <Button onClick={handleSearch} disabled={isLoading || !serialNumber}>Search</Button>
-        </div>
-      ) : (
-        <div className="search-form-container multi-search">
-          <div className="textarea-wrapper">
-            <label htmlFor="identifiers">Device Identifiers</label>
-            <textarea id="identifiers" placeholder="Enter serial numbers, SIM numbers, etc., separated by spaces, commas, or new lines..." value={identifiers} onChange={(e) => setIdentifiers(e.target.value)} />
-          </div>
-          <Button onClick={handleSearch} disabled={isLoading || !identifiers.trim()}>Search Statuses</Button>
-        </div>
-      )}
-
       <div className="results-container">
-        {!hasSearched && <p className="info-text">Enter search parameters to view statistics.</p>}
+        {!hasSearched && <p className="info-text">Enter device identifiers to begin analysis.</p>}
         {isLoading && <p className="info-text">Loading data...</p>}
         {error && <p className="error-text">{error}</p>}
         
         {doorData && (
           <div className="results-content">
-            <h2>Results for {doorData.serial_number} on {doorData.date}</h2>
+            <h2>Door Opening Analysis for {doorData.serial_number} on {doorData.date}</h2>
             <div className="summary-cards">
               <StatCard title="Total Door Openings" value={doorData.total_openings} icon={<DoorIcon />} />
               <StatCard title="Avg. Duration (sec)" value={doorData.average_duration_seconds.toFixed(1)} icon={<ClockIcon />} />
@@ -123,19 +152,17 @@ const DeviceAnalyticsPage: React.FC = () => {
           </div>
         )}
 
-        {statusData && (
+        {statusData && logCountData && (
           <div className="results-content">
-            <h2>Status Lookup Results</h2>
+            <h2>Multi-Device Analysis Results</h2>
             <div className="clients-table-container">
-              <h3>Registered Devices ({statusData.registered_devices.length})</h3>
+              <h3>Status Lookup</h3>
               <Table columns={statusColumns} data={statusData.registered_devices.map(d => ({...d, id: d.serial}))} />
             </div>
-            {statusData.test_devices.length > 0 && (
-              <div className="clients-table-container">
-                <h3>Test Devices ({statusData.test_devices.length})</h3>
-                <Table columns={statusColumns} data={statusData.test_devices.map(d => ({...d, id: d.serial}))} />
-              </div>
-            )}
+            <div className="clients-table-container">
+              <h3>Log Count (30d before last log)</h3>
+              <Table columns={logCountColumns} data={logCountData.data.map(d => ({...d, id: d.serial}))} />
+            </div>
           </div>
         )}
 

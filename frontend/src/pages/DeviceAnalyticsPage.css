@@ -5,70 +5,84 @@
     width: 100%;
   }
   
-  /* --- Mode Toggle --- */
-  .mode-toggle {
-    display: flex;
-    background-color: #2f2f2f;
-    border-radius: 8px;
-    padding: 0.25rem;
-    border: 1px solid var(--surface-border);
-    width: fit-content;
-  }
-  
-  .mode-toggle button {
-    padding: 0.5rem 1rem;
-    border: none;
-    background-color: transparent;
-    color: var(--text-secondary);
-    font-weight: 600;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-  }
-  
-  .mode-toggle button.active {
-    background-color: var(--accent-color);
-    color: white;
-  }
-  
-  /* --- Search Forms --- */
-  .search-form-container {
+  /* --- Analytics Command Bar --- */
+  .analytics-command-bar {
     display: grid;
-    grid-template-columns: 2fr 1fr auto;
+    grid-template-columns: 1fr auto auto;
     gap: 1rem;
-    align-items: flex-end;
-    padding: 1.5rem;
+    align-items: center;
+    padding: 1rem;
     background-color: #2f2f2f;
-    border-radius: 8px;
+    border-radius: 12px;
     border: 1px solid #444;
   }
   
-  .search-form-container.multi-search {
-    grid-template-columns: 1fr auto;
+  .command-input-wrapper {
+    background-color: #1a1a1a;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
   }
   
-  .textarea-wrapper {
+  .command-input {
+    flex-grow: 1;
+    border: none;
+    background: transparent;
+    color: white;
+    font-size: 1rem;
+    padding: 0.25rem;
+    min-width: 200px;
+  }
+  .command-input:focus {
+    outline: none;
+  }
+  
+  .identifier-tags {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
     gap: 0.5rem;
   }
   
-  .textarea-wrapper label {
+  .identifier-tag {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: var(--accent-color);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
     font-size: 0.9em;
-    color: #ccc;
+    font-weight: 500;
   }
   
-  .textarea-wrapper textarea {
-    width: 100%;
-    min-height: 100px;
-    padding: 0.8em 1em;
-    border-radius: 8px;
-    border: 1px solid #444;
+  .identifier-tag button {
+    background: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+  }
+  
+  .date-picker-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .date-picker-wrapper label {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+  }
+  .date-picker-wrapper input {
     background-color: #1a1a1a;
-    color: #fff;
-    font-family: inherit;
-    font-size: 1em;
-    resize: vertical;
+    border: 1px solid #444;
+    color: white;
+    padding: 0.5rem;
+    border-radius: 6px;
   }
   
   /* --- Results --- */

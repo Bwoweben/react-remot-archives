@@ -1,4 +1,4 @@
-import { type DoorOpeningStats, type MultiDeviceStatusResponse } from '../types';
+import { type DoorOpeningStats, type MultiDeviceStatusResponse, type LogCountResponse } from '../types';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
 
@@ -39,3 +39,15 @@ export const fetchMultiDeviceStatus = async (identifiers: string[]): Promise<Mul
   }
   return response.json();
 };
+
+export const fetchLogCount = async (identifiers: string[]): Promise<LogCountResponse> => {
+    const response = await fetch(`${API_BASE_URL}/devices/log-count`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifiers }),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to fetch log count data');
+    }
+    return response.json();
+  };
