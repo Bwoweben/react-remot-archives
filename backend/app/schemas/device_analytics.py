@@ -52,6 +52,9 @@ class DeviceLog(BaseModel):
     panel_voltage: Optional[float] = None
     panel_current: Optional[float] = None
     battery_voltage: Optional[float] = None
+    supply_voltage: Optional[float] = None # New field
+    supply_current: Optional[float] = None # New field
+    extras: Optional[str] = None 
 
 class DeviceLogResponse(BaseModel):
     serial_number: str

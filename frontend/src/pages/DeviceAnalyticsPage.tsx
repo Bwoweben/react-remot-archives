@@ -15,8 +15,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 type AnalyticsMode = 'singleDevice' | 'multiDevice';
 
 // --- SVG Icons ---
-const DoorIcon = () => <svg xmlns="http://www.w.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14"/><path d="M10 12h4"/></svg>;
-const ClockIcon = () => <svg xmlns="http://www.w.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>;
+const DoorIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14"/><path d="M10 12h4"/></svg>;
+const ClockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>;
 const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
 
 const DeviceAnalyticsPage: React.FC = () => {
@@ -36,6 +36,9 @@ const DeviceAnalyticsPage: React.FC = () => {
   // --- State for the secondary "deep dive" analysis ---
   const [isLoadingDoorData, setIsLoadingDoorData] = useState(false);
   const [doorData, setDoorData] = useState<DoorOpeningStats | null>(null);
+
+  // --- State for the chart controls ---
+  const [selectedChartParams, setSelectedChartParams] = useState<string[]>(['panel_voltage', 'panel_current']);
 
   useEffect(() => {
     const ids = inputValue.trim().split(/[\s,]+/).filter(Boolean);
@@ -59,7 +62,7 @@ const DeviceAnalyticsPage: React.FC = () => {
 
     try {
       if (mode === 'singleDevice' && identifiers.length === 1) {
-        const result = await fetchRecentLogs(identifiers[0]); // Fetch logs first
+        const result = await fetchRecentLogs(identifiers[0]);
         setLogsData(result.logs);
       } else if (mode === 'multiDevice' && identifiers.length > 0) {
         const [statusResult, logCountResult] = await Promise.all([
@@ -81,7 +84,7 @@ const DeviceAnalyticsPage: React.FC = () => {
   const handleAnalyzeDoorOpenings = async () => {
     if (identifiers.length !== 1) return;
     setIsLoadingDoorData(true);
-    setDoorData(null); // Clear previous results
+    setDoorData(null);
     try {
       const result = await fetchDoorOpeningStats(identifiers[0], date);
       setDoorData(result);
@@ -92,12 +95,24 @@ const DeviceAnalyticsPage: React.FC = () => {
     }
   };
 
+  const handleChartParamChange = (param: string) => {
+    setSelectedChartParams(prev => {
+      const isSelected = prev.includes(param);
+      if (isSelected) {
+        return prev.filter(p => p !== param);
+      } else {
+        return prev.length < 2 ? [...prev, param] : prev;
+      }
+    });
+  };
+
   // --- Table Columns ---
   const logsColumns = useMemo(() => [
     { Header: 'Timestamp', accessor: (row: DeviceLog) => new Date(row.time_stamp).toLocaleString() },
-    { Header: 'Panel Voltage (V)', accessor: (row: DeviceLog) => row.panel_voltage?.toFixed(2) ?? 'N/A' },
-    { Header: 'Panel Current (A)', accessor: (row: DeviceLog) => row.panel_current?.toFixed(2) ?? 'N/A' },
-    { Header: 'Battery Voltage (V)', accessor: (row: DeviceLog) => row.battery_voltage?.toFixed(2) ?? 'N/A' },
+    { Header: 'Panel (V)', accessor: (row: DeviceLog) => row.panel_voltage?.toFixed(2) ?? 'N/A' },
+    { Header: 'Supply (V)', accessor: (row: DeviceLog) => row.supply_voltage?.toFixed(2) ?? 'N/A' },
+    { Header: 'Battery (V)', accessor: (row: DeviceLog) => row.battery_voltage?.toFixed(2) ?? 'N/A' },
+    { Header: 'Extras', accessor: (row: DeviceLog) => row.extras ?? 'N/A' },
   ], []);
 
   const statusColumns = useMemo(() => [
@@ -121,6 +136,13 @@ const DeviceAnalyticsPage: React.FC = () => {
     { Header: 'Timestamp', accessor: (row: any) => new Date(row.timestamp).toLocaleString() },
     { Header: 'Duration (seconds)', accessor: (row: any) => row.duration_seconds.toFixed(2) },
   ], []);
+  
+  const chartableParams = [
+    { key: 'panel_voltage', name: 'Panel (V)', color: '#8884d8' },
+    { key: 'panel_current', name: 'Panel (A)', color: '#82ca9d' },
+    { key: 'battery_voltage', name: 'Battery (V)', color: '#ffc658' },
+    { key: 'supply_voltage', name: 'Supply (V)', color: '#ff8042' },
+  ];
 
   return (
     <div className="device-analytics-page">
@@ -167,6 +189,21 @@ const DeviceAnalyticsPage: React.FC = () => {
           <div className="results-content">
             <h2>Recent Logs for {identifiers[0]}</h2>
             <div className="logs-content-wrapper">
+              <div className="chart-controls">
+                <p>Visualize up to 2 parameters:</p>
+                <div className="param-pills">
+                  {chartableParams.map(param => (
+                    <button
+                      key={param.key}
+                      onClick={() => handleChartParamChange(param.key)}
+                      className={`param-pill ${selectedChartParams.includes(param.key) ? 'active' : ''}`}
+                      disabled={!selectedChartParams.includes(param.key) && selectedChartParams.length >= 2}
+                    >
+                      {param.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="logs-chart">
                 <ResponsiveContainer width="100%" height={250}>
                   <LineChart data={logsData.slice().reverse()}>
@@ -175,9 +212,11 @@ const DeviceAnalyticsPage: React.FC = () => {
                     <YAxis stroke="#a0a0a0" />
                     <Tooltip contentStyle={{ backgroundColor: '#2f2f2f', border: '1px solid #444' }} />
                     <Legend />
-                    <Line type="monotone" dataKey="panel_voltage" name="Panel (V)" stroke="#8884d8" dot={false} />
-                    <Line type="monotone" dataKey="panel_current" name="Panel (A)" stroke="#82ca9d" dot={false} />
-                    <Line type="monotone" dataKey="battery_voltage" name="Battery (V)" stroke="#ffc658" dot={false} />
+                    {chartableParams.map(param => 
+                      selectedChartParams.includes(param.key) && (
+                        <Line key={param.key} type="monotone" dataKey={param.key} name={param.name} stroke={param.color} dot={false} />
+                      )
+                    )}
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -240,4 +279,3 @@ const DeviceAnalyticsPage: React.FC = () => {
 };
 
 export default DeviceAnalyticsPage;
-

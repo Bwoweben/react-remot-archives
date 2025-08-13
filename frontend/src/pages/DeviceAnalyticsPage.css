@@ -225,5 +225,52 @@
     gap: 1.5rem;
     animation: fadeIn 0.5s ease-in-out;
   }
+
+  .chart-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background-color: #1a1a1a;
+    border-radius: 8px;
+  }
+  
+  .chart-controls p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+  
+  .param-pills {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .param-pill {
+    padding: 0.4rem 0.8rem;
+    border: 1px solid var(--surface-border);
+    background-color: var(--surface-color);
+    color: var(--text-secondary);
+    font-weight: 600;
+    border-radius: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .param-pill:hover:not(:disabled) {
+    background-color: #444;
+    color: white;
+  }
+  
+  .param-pill.active {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+    color: white;
+  }
+  
+  .param-pill:disabled:not(.active) {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
   
   

@@ -180,12 +180,15 @@ def get_recent_logs(serial_number: str, hours: int = 3, db: Session = Depends(de
         Record.time_stamp,
         Record.panel_voltage,
         Record.panel_current,
-        Record.battery_voltage
-    ).join(Device, Record.device_id == Device.id)\
-     .filter(
-         Device.serial == serial_number,
-         Record.time_stamp >= start_time,
-         Record.time_stamp <= last_log_time
+        Record.battery_voltage,
+        Record.supply_voltage,
+        RecordMeta.extras
+    ).join(Record.device)\
+    .outerjoin(Record.meta)\
+    .filter(
+        Device.serial == serial_number,
+        Record.time_stamp >= start_time,
+        Record.time_stamp <= last_log_time
      )\
      .order_by(Record.time_stamp.desc())\
      .limit(1000)\

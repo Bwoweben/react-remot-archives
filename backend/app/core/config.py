@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     ]
 
     MONGO_CONNECTION_STRING: str
+    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
 
     # --- Pydantic Settings Config ---
     # Reads environment variables from .env file

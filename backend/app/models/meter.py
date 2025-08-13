@@ -12,6 +12,10 @@ class Record(Base):
     panel_voltage = Column(Float, nullable=True)
     panel_current = Column(Float, nullable=True)
     battery_voltage = Column(Float, nullable=True)
+    supply_voltage = Column(Float, nullable=True)
+    supply_current = Column(Float, nullable=True) # New column
+# New column
+
     
     # Foreign key to the 'devices' table
     device_id = Column('device', Integer, ForeignKey("devices.id"))
