@@ -1,25 +1,20 @@
+# app/schemas/device_analytics.py
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 
 class DoorOpeningEvent(BaseModel):
-    """
-    Schema for a single door opening event.
-    """
     id: int
     timestamp: datetime
     duration_seconds: float
 
 class DoorOpeningStats(BaseModel):
-    """
-    Schema for the complete response for the door openings query.
-    """
     serial_number: str
     date: str
     total_openings: int
     average_duration_seconds: float
     openings: List[DoorOpeningEvent]
-    
+
 class DeviceStatusRequest(BaseModel):
     identifiers: List[str]
 
@@ -37,7 +32,7 @@ class DeviceStatus(BaseModel):
 class MultiDeviceStatusResponse(BaseModel):
     registered_devices: List[DeviceStatus]
     test_devices: List[DeviceStatus]
-    
+
 class LogCountResult(BaseModel):
     No: int
     serial: str
@@ -50,3 +45,14 @@ class LogCountResult(BaseModel):
 
 class LogCountResponse(BaseModel):
     data: List[LogCountResult]
+
+# --- ADD THESE MISSING SCHEMAS ---
+class DeviceLog(BaseModel):
+    time_stamp: datetime
+    panel_voltage: Optional[float] = None
+    panel_current: Optional[float] = None
+    battery_voltage: Optional[float] = None
+
+class DeviceLogResponse(BaseModel):
+    serial_number: str
+    logs: List[DeviceLog]

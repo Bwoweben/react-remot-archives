@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, Float, ForeignKey
 from sqlalchemy.orm import relationship
 from .base import Base
 
@@ -7,6 +7,11 @@ class Record(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     time_stamp = Column(DateTime, nullable=False, index=True)
+    
+    # --- ADD THESE MISSING COLUMNS ---
+    panel_voltage = Column(Float, nullable=True)
+    panel_current = Column(Float, nullable=True)
+    battery_voltage = Column(Float, nullable=True)
     
     # Foreign key to the 'devices' table
     device_id = Column('device', Integer, ForeignKey("devices.id"))

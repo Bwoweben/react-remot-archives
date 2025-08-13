@@ -8,12 +8,12 @@ from app.api import deps
 from app.models.device import Device, DeviceModel
 from app.models.meter import Record, RecordMeta
 from app.models.user import User
-from app.schemas.device_analytics import DoorOpeningStats, MultiDeviceStatusResponse, DeviceStatusRequest
 from app.schemas.device_analytics import (
     DoorOpeningStats, 
     MultiDeviceStatusResponse, 
     DeviceStatusRequest,
-    LogCountResponse
+    LogCountResponse,
+    DeviceLogResponse
 )
 
 router = APIRouter()
@@ -48,7 +48,7 @@ def get_door_opening_stats(serial_number: str, date: str, db: Session = Depends(
         try:
             door_value_str = stamp.extras.split(',')[2].split(':')[1]
             daily_values.append(float(door_value_str))
-        except (IndexError, ValueError):
+        except (IndexError, ValueError, AttributeError):
             continue
     
     openings = []
@@ -130,8 +130,12 @@ def get_multi_device_status(request_data: DeviceStatusRequest, db: Session = Dep
         
     return {"registered_devices": registered_devices, "test_devices": test_devices}
 
+
 @router.post("/log-count", response_model=LogCountResponse)
 def get_log_count(request_data: DeviceStatusRequest, db: Session = Depends(deps.get_db)):
+    """
+    Counts logs for devices within a time window before their last_log date.
+    """
     unique_params = list(dict.fromkeys(request_data.identifiers))
 
     devices = db.query(
@@ -158,3 +162,33 @@ def get_log_count(request_data: DeviceStatusRequest, db: Session = Depends(deps.
     ]
 
     return {"data": modified_list}
+
+
+@router.get("/{serial_number}/recent-logs", response_model=DeviceLogResponse)
+def get_recent_logs(serial_number: str, hours: int = 3, db: Session = Depends(deps.get_db)):
+    """
+    Fetches detailed logs for a device within N hours of its last communication.
+    """
+    last_log_time = db.query(Device.last_log).filter(Device.serial == serial_number).scalar()
+
+    if not last_log_time:
+        raise HTTPException(status_code=404, detail="Device has never logged.")
+
+    start_time = last_log_time - timedelta(hours=hours)
+
+    logs = db.query(
+        Record.time_stamp,
+        Record.panel_voltage,
+        Record.panel_current,
+        Record.battery_voltage
+    ).join(Device, Record.device_id == Device.id)\
+     .filter(
+         Device.serial == serial_number,
+         Record.time_stamp >= start_time,
+         Record.time_stamp <= last_log_time
+     )\
+     .order_by(Record.time_stamp.desc())\
+     .limit(1000)\
+     .all()
+
+    return {"serial_number": serial_number, "logs": logs}

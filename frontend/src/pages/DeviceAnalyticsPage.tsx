@@ -1,20 +1,23 @@
 import React, { useState, useMemo, useEffect } from 'react';
-// import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import StatCard from '../components/common/StatCard';
 import Table from '../components/common/Table';
-import { fetchDoorOpeningStats, fetchMultiDeviceStatus, fetchLogCount } from '../services/deviceApi';
-import { type DoorOpeningStats, type MultiDeviceStatusResponse, 
-    type DeviceStatus, type LogCountResponse, type LogCountResult } from '../types';
+import { fetchDoorOpeningStats, fetchMultiDeviceStatus, fetchLogCount, fetchRecentLogs } from '../services/deviceApi';
+import { type DoorOpeningStats, 
+    type MultiDeviceStatusResponse, 
+    type DeviceStatus, 
+    type LogCountResponse, 
+    type LogCountResult, 
+    type DeviceLog } from '../types';
 import './DeviceAnalyticsPage.css';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 type AnalyticsMode = 'singleDevice' | 'multiDevice';
 
 // --- SVG Icons ---
-const DoorIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14"/><path d="M10 12h4"/></svg>;
-const ClockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>;
+const DoorIcon = () => <svg xmlns="http://www.w.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14"/><path d="M10 12h4"/></svg>;
+const ClockIcon = () => <svg xmlns="http://www.w.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>;
 const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
-
 
 const DeviceAnalyticsPage: React.FC = () => {
   const [mode, setMode] = useState<AnalyticsMode>('singleDevice');
@@ -26,11 +29,14 @@ const DeviceAnalyticsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
-  const [doorData, setDoorData] = useState<DoorOpeningStats | null>(null);
+  const [logsData, setLogsData] = useState<DeviceLog[] | null>(null);
   const [statusData, setStatusData] = useState<MultiDeviceStatusResponse | null>(null);
   const [logCountData, setLogCountData] = useState<LogCountResponse | null>(null);
+  
+  // --- State for the secondary "deep dive" analysis ---
+  const [isLoadingDoorData, setIsLoadingDoorData] = useState(false);
+  const [doorData, setDoorData] = useState<DoorOpeningStats | null>(null);
 
-  // Effect to detect mode based on input
   useEffect(() => {
     const ids = inputValue.trim().split(/[\s,]+/).filter(Boolean);
     setIdentifiers(ids);
@@ -46,16 +52,16 @@ const DeviceAnalyticsPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     setHasSearched(true);
-    setDoorData(null);
+    setLogsData(null);
     setStatusData(null);
     setLogCountData(null);
+    setDoorData(null);
 
     try {
       if (mode === 'singleDevice' && identifiers.length === 1) {
-        const result = await fetchDoorOpeningStats(identifiers[0], date);
-        setDoorData(result);
+        const result = await fetchRecentLogs(identifiers[0]); // Fetch logs first
+        setLogsData(result.logs);
       } else if (mode === 'multiDevice' && identifiers.length > 0) {
-        // Fetch both status and log count in parallel for efficiency
         const [statusResult, logCountResult] = await Promise.all([
           fetchMultiDeviceStatus(identifiers),
           fetchLogCount(identifiers)
@@ -64,8 +70,6 @@ const DeviceAnalyticsPage: React.FC = () => {
         setLogCountData(logCountResult);
       } else {
         setError("Please enter at least one device identifier.");
-        setIsLoading(false);
-        return;
       }
     } catch (err: any) {
       setError(err.message || 'Failed to fetch data.');
@@ -74,11 +78,26 @@ const DeviceAnalyticsPage: React.FC = () => {
     }
   };
 
+  const handleAnalyzeDoorOpenings = async () => {
+    if (identifiers.length !== 1) return;
+    setIsLoadingDoorData(true);
+    setDoorData(null); // Clear previous results
+    try {
+      const result = await fetchDoorOpeningStats(identifiers[0], date);
+      setDoorData(result);
+    } catch (err: any) {
+      setError("Could not load door opening data.");
+    } finally {
+      setIsLoadingDoorData(false);
+    }
+  };
+
   // --- Table Columns ---
-  const doorOpeningColumns = useMemo(() => [
-    { Header: '#', accessor: (row: any) => row.id },
-    { Header: 'Timestamp', accessor: (row: any) => new Date(row.timestamp).toLocaleString() },
-    { Header: 'Duration (seconds)', accessor: (row: any) => row.duration_seconds.toFixed(2) },
+  const logsColumns = useMemo(() => [
+    { Header: 'Timestamp', accessor: (row: DeviceLog) => new Date(row.time_stamp).toLocaleString() },
+    { Header: 'Panel Voltage (V)', accessor: (row: DeviceLog) => row.panel_voltage?.toFixed(2) ?? 'N/A' },
+    { Header: 'Panel Current (A)', accessor: (row: DeviceLog) => row.panel_current?.toFixed(2) ?? 'N/A' },
+    { Header: 'Battery Voltage (V)', accessor: (row: DeviceLog) => row.battery_voltage?.toFixed(2) ?? 'N/A' },
   ], []);
 
   const statusColumns = useMemo(() => [
@@ -97,6 +116,12 @@ const DeviceAnalyticsPage: React.FC = () => {
     { Header: 'Last Log', accessor: (row: LogCountResult) => new Date(row.last_log!).toLocaleString() },
   ], []);
 
+  const doorOpeningColumns = useMemo(() => [
+    { Header: '#', accessor: (row: any) => row.id },
+    { Header: 'Timestamp', accessor: (row: any) => new Date(row.timestamp).toLocaleString() },
+    { Header: 'Duration (seconds)', accessor: (row: any) => row.duration_seconds.toFixed(2) },
+  ], []);
+
   return (
     <div className="device-analytics-page">
       <h1 className="page-title">Device Analytics</h1>
@@ -113,7 +138,7 @@ const DeviceAnalyticsPage: React.FC = () => {
           </div>
           <input
             type="text"
-            placeholder="Enter one (for door analysis) or more device identifiers..."
+            placeholder="Enter one or more device identifiers..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             className="command-input"
@@ -129,7 +154,7 @@ const DeviceAnalyticsPage: React.FC = () => {
 
         <Button onClick={handleSearch} disabled={isLoading || identifiers.length === 0}>
           {isLoading ? 'Analyzing...' : 
-           mode === 'singleDevice' ? 'Analyze Device' : `Analyze ${identifiers.length} Devices`}
+           mode === 'singleDevice' ? 'View Recent Logs' : `Analyze ${identifiers.length} Devices`}
         </Button>
       </div>
 
@@ -138,16 +163,50 @@ const DeviceAnalyticsPage: React.FC = () => {
         {isLoading && <p className="info-text">Loading data...</p>}
         {error && <p className="error-text">{error}</p>}
         
-        {doorData && (
+        {logsData && (
           <div className="results-content">
-            <h2>Door Opening Analysis for {doorData.serial_number} on {doorData.date}</h2>
-            <div className="summary-cards">
-              <StatCard title="Total Door Openings" value={doorData.total_openings} icon={<DoorIcon />} />
-              <StatCard title="Avg. Duration (sec)" value={doorData.average_duration_seconds.toFixed(1)} icon={<ClockIcon />} />
+            <h2>Recent Logs for {identifiers[0]}</h2>
+            <div className="logs-content-wrapper">
+              <div className="logs-chart">
+                <ResponsiveContainer width="100%" height={250}>
+                  <LineChart data={logsData.slice().reverse()}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+                    <XAxis dataKey="time_stamp" tickFormatter={(ts) => new Date(ts).toLocaleTimeString()} stroke="#a0a0a0" />
+                    <YAxis stroke="#a0a0a0" />
+                    <Tooltip contentStyle={{ backgroundColor: '#2f2f2f', border: '1px solid #444' }} />
+                    <Legend />
+                    <Line type="monotone" dataKey="panel_voltage" name="Panel (V)" stroke="#8884d8" dot={false} />
+                    <Line type="monotone" dataKey="panel_current" name="Panel (A)" stroke="#82ca9d" dot={false} />
+                    <Line type="monotone" dataKey="battery_voltage" name="Battery (V)" stroke="#ffc658" dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="logs-table">
+                <Table columns={logsColumns} data={logsData.map((log, i) => ({...log, id: i}))} />
+              </div>
             </div>
-            <div className="clients-table-container">
-              <h3>Individual Openings</h3>
-              <Table columns={doorOpeningColumns} data={doorData.openings} />
+
+            <div className="deep-dive-section">
+              <h3>Deep Dive Analysis</h3>
+              <div className="deep-dive-controls">
+                <p>Analyze door openings for this device on the selected date.</p>
+                <Button onClick={handleAnalyzeDoorOpenings} disabled={isLoadingDoorData}>
+                  {isLoadingDoorData ? "Analyzing..." : "Analyze Door Openings"}
+                </Button>
+              </div>
+              {isLoadingDoorData && <p className="info-text">Loading door data...</p>}
+              {doorData && (
+                <div className="door-results">
+                  <div className="summary-cards">
+                    <StatCard title="Total Door Openings" value={doorData.total_openings} icon={<DoorIcon />} />
+                    <StatCard title="Avg. Duration (sec)" value={doorData.average_duration_seconds.toFixed(1)} icon={<ClockIcon />} />
+                  </div>
+                  <div className="clients-table-container">
+                    <h4>Individual Openings on {doorData.date}</h4>
+                    <Table columns={doorOpeningColumns} data={doorData.openings} />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -159,14 +218,20 @@ const DeviceAnalyticsPage: React.FC = () => {
               <h3>Status Lookup</h3>
               <Table columns={statusColumns} data={statusData.registered_devices.map(d => ({...d, id: d.serial}))} />
             </div>
+            {statusData.test_devices.length > 0 &&
+              <div className="clients-table-container">
+                <h3>Test Devices</h3>
+                <Table columns={statusColumns} data={statusData.test_devices.map(d => ({...d, id: d.serial}))} />
+              </div>
+            }
             <div className="clients-table-container">
-              <h3>Log Count (30d before last log)</h3>
+              <h3>Log Count (3h before last log)</h3>
               <Table columns={logCountColumns} data={logCountData.data.map(d => ({...d, id: d.serial}))} />
             </div>
           </div>
         )}
 
-        {hasSearched && !isLoading && !error && !doorData && !statusData && (
+        {hasSearched && !isLoading && !error && !logsData && !statusData && (
            <p className="info-text">No data found for the specified parameters.</p>
         )}
       </div>

@@ -96,3 +96,32 @@ export interface LogCountResult {
 export interface LogCountResponse {
   data: LogCountResult[];
 }
+
+// --- Types for Device Analytics (Log Count) ---
+export interface LogCountResult {
+  No: number;
+  serial: string;
+  alias?: string;
+  last_log?: string;
+  first_name?: string;
+  last_name?: string;
+  model_name?: string;
+  log_count: number;
+}
+
+export interface LogCountResponse {
+  data: LogCountResult[];
+}
+
+// --- ADD THESE MISSING TYPES ---
+export interface DeviceLog {
+  time_stamp: string;
+  panel_voltage?: number;
+  panel_current?: number;
+  battery_voltage?: number;
+}
+
+export interface DeviceLogResponse {
+  serial_number: string;
+  logs: DeviceLog[];
+}
