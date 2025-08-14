@@ -135,12 +135,29 @@ export interface DeviceLogResponse {
   logs: DeviceLog[];
 }
 
+// export interface StartTaskResponse {
+//   task_id: string;
+// }
+
+// export interface TaskStatusResponse {
+//   task_id: string;
+//   status: 'PENDING' | 'SUCCESS' | 'FAILURE';
+//   result: any;
+// }
+
+// --- Types for Celery Background Tasks ---
+
 export interface StartTaskResponse {
   task_id: string;
+  group_id?: string; // For group tasks
+  total_tasks?: number;
 }
 
 export interface TaskStatusResponse {
-  task_id: string;
-  status: 'PENDING' | 'SUCCESS' | 'FAILURE';
-  result: any;
+  task_id?: string;
+  group_id?: string;
+  status: 'PENDING' | 'SUCCESS' | 'FAILURE' | 'COMPLETE' | 'IN_PROGRESS'; // Added 'COMPLETE' and 'IN_PROGRESS'
+  result?: any;
+  completed?: number;
+  total?: number;
 }

@@ -17,7 +17,8 @@ import { type CO2StatsResponse,
     type MonthlyCO2Data } from '../types';
 import './CO2StatsPage.css';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { useTaskPolling } from '../hooks/useTaskPolling';
+import { useTaskGroupPolling } from '../hooks/useTaskGroupPolling';
+import { useResultsPolling } from '../hooks/useResultsPolling';
 
 const CO2Icon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 8h.01"/><path d="M12 12h.01"/><path d="M12 16h.01"/></svg>;
 
@@ -28,27 +29,26 @@ const CO2StatsPage: React.FC = () => {
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   
-  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
-  const [monthlyData, setMonthlyData] = useState<MonthlyCO2Data[] | null>(null);
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  const [progress, setProgress] = useState({ completed: 0, total: 0 });
   const [formError, setFormError] = useState<string | null>(null);
 
-  const handleSuccess = useCallback(async () => {
-    try {
-      const result = await fetchMonthlyCO2Stats(parseInt(clientId), year, month);
-      setMonthlyData(result.data);
-    } catch (err) {
-      setFormError("Failed to retrieve completed data.");
-    } finally {
-      setActiveTaskId(null);
+  const handleSuccess = useCallback(() => {
+    console.log("Task group finished!");
+  }, []);
+
+  const isPollingActive = useTaskGroupPolling(activeGroupId, setProgress, handleSuccess);
+
+  const resultsPollingFn = useCallback(() => {
+    // Only poll if clientId is a valid number
+    if (clientId && !isNaN(parseInt(clientId))) {
+      return fetchMonthlyCO2Stats(parseInt(clientId), year, month);
     }
+    return Promise.resolve(null); // Return a resolved promise if no valid client ID
   }, [clientId, year, month]);
 
-  const handleError = () => {
-    setFormError("The calculation task failed. Please try again.");
-    setActiveTaskId(null);
-  };
-
-  const taskStatus = useTaskPolling(activeTaskId, handleSuccess, handleError);
+  const polledResults = useResultsPolling(isPollingActive, resultsPollingFn);
+  const monthlyData = polledResults?.data || null;
 
   const handleMonthlyAnalysis = async () => {
     if (!clientId) {
@@ -56,10 +56,10 @@ const CO2StatsPage: React.FC = () => {
       return;
     }
     setFormError(null);
-    setMonthlyData(null);
+    setProgress({ completed: 0, total: 0 });
     try {
       const response = await startMonthlyCO2Task(parseInt(clientId), year, month);
-      setActiveTaskId(response.task_id);
+      setActiveGroupId(response.group_id || null);
     } catch (err) {
       setFormError("Failed to submit the calculation task.");
     }
@@ -101,28 +101,33 @@ const CO2StatsPage: React.FC = () => {
           <Input id="clientId" label="Client ID" placeholder="e.g., 93" value={clientId} onChange={(e) => setClientId(e.target.value)} />
           <Input id="year" label="Year" type="number" value={year} onChange={(e) => setYear(parseInt(e.target.value))} />
           <Input id="month" label="Month" type="number" min="1" max="12" value={month} onChange={(e) => setMonth(parseInt(e.target.value))} />
-          <Button onClick={handleMonthlyAnalysis} disabled={!!activeTaskId}>
-            {taskStatus === 'PENDING' ? 'Calculation in Progress...' : 'Start Monthly Calculation'}
+          <Button onClick={handleMonthlyAnalysis} disabled={isPollingActive}>
+            {isPollingActive ? 'Calculation in Progress...' : 'Start Monthly Calculation'}
           </Button>
         </div>
 
         {formError && <p className="error-text">{formError}</p>}
 
-        {taskStatus === 'PENDING' && (
-          <div className="task-status-container">
-            <div className="spinner"></div>
-            <p>Task is running in the background. You can navigate away and check back later.</p>
-            <p><strong>Task ID:</strong> {activeTaskId}</p>
+        {isPollingActive && (
+          <div className="task-progress-container">
+            <h3>Processing Device Data</h3>
+            <div className="progress-bar-wrapper">
+              <div 
+                className="progress-bar-fill" 
+                style={{ width: `${(progress.completed / progress.total) * 100 || 0}%` }}
+              ></div>
+            </div>
+            <p>{progress.completed} of {progress.total} device-days calculated. You can navigate away and check back later.</p>
           </div>
         )}
         
-        {monthlyData && (
+        {(isPollingActive || monthlyData) && (
           <div className="monthly-results">
-            {monthlyData.length > 0 ? (
+            {monthlyData && monthlyData.length > 0 ? (
               <>
-                <StatCard title="Total Emissions for Selected Month" value={`${monthlyTotalCO2.toFixed(4)} tCO2e`} icon={<CO2Icon />} />
+                <StatCard title="Total Emissions for Selected Month (So Far)" value={`${monthlyTotalCO2.toFixed(4)} tCO2e`} icon={<CO2Icon />} />
                 <div className="logs-chart">
-                  <h3>Daily Emissions Trend</h3>
+                  <h3>Daily Emissions Trend (Live)</h3>
                   <ResponsiveContainer width="100%" height={250}>
                     <LineChart data={monthlyData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#444" />
@@ -135,12 +140,12 @@ const CO2StatsPage: React.FC = () => {
                   </ResponsiveContainer>
                 </div>
                 <div className="clients-table-container">
-                  <h3>Daily Breakdown</h3>
+                  <h3>Daily Breakdown (Live)</h3>
                   <Table columns={monthlyColumns} data={monthlyData.map(d => ({...d, id: `${d.serial}-${d.day}`}))} />
                 </div>
               </>
             ) : (
-              <p className="info-text">Calculation complete, but no data was found for this client for the selected month.</p>
+              !isPollingActive && <p className="info-text">Calculation complete, but no data was found for this client for the selected month.</p>
             )}
           </div>
         )}
