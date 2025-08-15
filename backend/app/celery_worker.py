@@ -105,6 +105,7 @@ def calculate_single_day_co2_task(client_id: int, serial: str, alias: str, clien
 def clear_job_lock_task(lock_key: str):
     """
     A simple task to delete the job lock key from Redis upon completion.
+    This now only accepts the lock_key it needs to clear.
     """
     mongo = MongoManager()
     mongo.redis_client.delete(lock_key)

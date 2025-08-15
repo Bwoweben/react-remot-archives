@@ -83,12 +83,10 @@ def start_monthly_co2_calculation(client_id: int, year: int, month: int, db: Ses
         for day in range(1, num_days + 1)
     )
     
-    # Chain the cleanup task to run only after all calculation tasks are complete
-    job_chain = chain(calculation_tasks, clear_job_lock_task.s(lock_key))
+    job_chain = chain(calculation_tasks, clear_job_lock_task.si(lock_key))
     
     task_group = job_chain.apply_async()
     
-    # Set the lock in Redis with a 2-hour timeout as a safety measure
     mongo.redis_client.set(lock_key, task_group.id, ex=7200)
 
     return {"group_id": task_group.id, "total_tasks": len(calculation_tasks)}
