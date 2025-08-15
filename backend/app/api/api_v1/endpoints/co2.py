@@ -1,15 +1,15 @@
 import math
 import calendar
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import extract
-from celery import group
+from celery import group, chain
 from celery.result import GroupResult
 
 # --- Core App Imports ---
 from app.api import deps
-from app.db.mongo_session import get_mongo_db, MongoManager
-from app.celery_worker import calculate_single_day_co2_task, celery_app
+from app.db.mongo_session import MongoManager
+from app.celery_worker import calculate_single_day_co2_task, clear_job_lock_task, celery_app
 
 # --- Schema and Model Imports ---
 from app.schemas.co2_stats import CO2StatsResponse, MonthlyCO2Response
@@ -20,12 +20,11 @@ from app.models.meter import Record
 router = APIRouter()
 
 @router.get("/clients-annual-co2", response_model=CO2StatsResponse)
-def get_clients_annual_co2(mongo: MongoManager = Depends(get_mongo_db)):
+def get_clients_annual_co2(mongo: MongoManager = Depends(deps.get_mongo_db)):
     """
     Aggregates annual energy consumption and calculates CO2 emissions per client.
     This is a high-level summary and does not use background tasks.
     """
-    # ... (The logic for this function remains unchanged)
     CONSUMPTION_55 = 55
     CONSUMPTION_250 = 250
     FACTOR_55 = 0.0068
@@ -56,11 +55,19 @@ def get_clients_annual_co2(mongo: MongoManager = Depends(get_mongo_db)):
 
 
 @router.post("/start-monthly-co2-calculation")
-def start_monthly_co2_calculation(client_id: int, year: int, month: int, db: Session = Depends(deps.get_db)):
+def start_monthly_co2_calculation(client_id: int, year: int, month: int, db: Session = Depends(deps.get_db), mongo: MongoManager = Depends(deps.get_mongo_db)):
     """
-    Dispatches hundreds of small background tasks, one for each device/day,
-    and returns a group ID to track their collective progress.
+    Dispatches background tasks to calculate CO2, but only if a job for the
+    same parameters is not already running (checked via a Redis lock).
     """
+    lock_key = f"co2_calc_lock:{client_id}:{year}:{month}"
+    
+    if mongo.redis_client.exists(lock_key):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A calculation for this client, year, and month is already in progress. Please wait for it to complete."
+        )
+
     client_devices = db.query(Device.serial, Device.alias).filter(Device.user == client_id).all()
     if not client_devices:
         raise HTTPException(status_code=404, detail="Client or devices not found.")
@@ -68,21 +75,23 @@ def start_monthly_co2_calculation(client_id: int, year: int, month: int, db: Ses
     client_name_query = db.query(User.first_name, User.last_name).filter(User.id == client_id).first()
     client_name = f"{client_name_query.first_name} {client_name_query.last_name}"
 
-    # Determine the number of days in the given month and year
     _, num_days = calendar.monthrange(year, month)
 
-    # Create a group of all the individual tasks we need to run
-    tasks = group(
+    calculation_tasks = group(
         calculate_single_day_co2_task.s(client_id, dev.serial, dev.alias, client_name, year, month, day)
         for dev in client_devices
         for day in range(1, num_days + 1)
     )
     
-    # Execute the group of tasks in the background
-    task_group = tasks.apply_async()
-    task_group.save() # Save the group's metadata to the result backend (Redis)
+    # Chain the cleanup task to run only after all calculation tasks are complete
+    job_chain = chain(calculation_tasks, clear_job_lock_task.s(lock_key))
     
-    return {"group_id": task_group.id, "total_tasks": len(tasks)}
+    task_group = job_chain.apply_async()
+    
+    # Set the lock in Redis with a 2-hour timeout as a safety measure
+    mongo.redis_client.set(lock_key, task_group.id, ex=7200)
+
+    return {"group_id": task_group.id, "total_tasks": len(calculation_tasks)}
 
 
 @router.get("/task-group-progress/{group_id}")
@@ -103,7 +112,7 @@ def get_task_group_progress(group_id: str):
 
 
 @router.get("/client-monthly-co2", response_model=MonthlyCO2Response)
-def get_monthly_co2_results(client_id: int, year: int, month: int, mongo: MongoManager = Depends(get_mongo_db)):
+def get_monthly_co2_results(client_id: int, year: int, month: int, mongo: MongoManager = Depends(deps.get_mongo_db)):
     """
     Retrieves the results of a monthly calculation from MongoDB.
     This is used for polling the final data as it's being populated.

@@ -100,3 +100,12 @@ def calculate_single_day_co2_task(client_id: int, serial: str, alias: str, clien
     finally:
         # Ensure the database session is always closed to prevent connection leaks
         db.close()
+
+@celery_app.task(name="clear_job_lock")
+def clear_job_lock_task(lock_key: str):
+    """
+    A simple task to delete the job lock key from Redis upon completion.
+    """
+    mongo = MongoManager()
+    mongo.redis_client.delete(lock_key)
+    return f"Lock {lock_key} cleared."

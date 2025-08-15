@@ -1,6 +1,7 @@
 # app/db/mongo_session.py
 from pymongo import MongoClient
 from app.core.config import settings
+import redis
 
 class MongoManager:
     """
@@ -11,6 +12,8 @@ class MongoManager:
     def __init__(self):
         # --- Establish MongoDB connection using URI from settings ---
         self.client = MongoClient(settings.MONGO_CONNECTION_STRING)
+        # We parse the Redis URL from settings to connect.
+        self.redis_client = redis.from_url(settings.CELERY_BROKER_URL)
         
         # --- Select databases ---
         self.db_flask = self.client.flask_db       # Primary database
